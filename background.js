@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   contextBeforeWords: 80,
   contextAfterWords: 80,
   multiTurn: true,
+  targetLanguage: "Simplified Chinese",
   theme: "system"
 };
 
@@ -193,6 +194,7 @@ function normalizeSettings(raw) {
   const contextBeforeWords = clampInteger(raw.contextBeforeWords, 0, 1000, DEFAULT_SETTINGS.contextBeforeWords);
   const contextAfterWords = clampInteger(raw.contextAfterWords, 0, 1000, DEFAULT_SETTINGS.contextAfterWords);
   const multiTurn = typeof raw.multiTurn === "boolean" ? raw.multiTurn : DEFAULT_SETTINGS.multiTurn;
+  const targetLanguage = normalizeTargetLanguage(raw.targetLanguage);
   const theme = normalizeTheme(raw.theme);
 
   return {
@@ -202,6 +204,7 @@ function normalizeSettings(raw) {
     contextBeforeWords,
     contextAfterWords,
     multiTurn,
+    targetLanguage,
     theme
   };
 }
@@ -218,6 +221,17 @@ function normalizeTheme(value) {
     return value;
   }
   return DEFAULT_SETTINGS.theme;
+}
+
+function normalizeTargetLanguage(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_SETTINGS.targetLanguage;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return DEFAULT_SETTINGS.targetLanguage;
+  }
+  return trimmed.slice(0, 64);
 }
 
 function normalizeBaseUrl(value, fallback) {
@@ -382,7 +396,7 @@ async function handleStreamRequest(message, sender) {
 
   const conversationKey = getConversationKey(sender);
   const contextMessages = settings.multiTurn ? conversationMemory.get(conversationKey) || [] : [];
-  const { systemPrompt, userPrompt } = buildPrompts(message);
+  const { systemPrompt, userPrompt } = buildPrompts(message, settings);
   const messages = [
     { role: "system", content: systemPrompt },
     ...contextMessages.slice(-10),
@@ -422,31 +436,30 @@ async function handleStreamRequest(message, sender) {
   }
 }
 
-function buildPrompts(message) {
+function buildPrompts(message, settings) {
   const selectedText = (message.selectedText || "").trim();
   const beforeContext = (message.beforeContext || "").trim();
   const afterContext = (message.afterContext || "").trim();
+  const targetLanguage = normalizeTargetLanguage(message.targetLanguage || settings.targetLanguage);
 
   if (message.mode === "explain") {
-    const translationText = (message.translationText || "").trim();
     return {
       systemPrompt: [
         "You are Sense Translate.",
-        "Explain translation choices clearly in Simplified Chinese.",
-        "Focus on meaning, ambiguity, tone, and contextual clues."
+        "Explain the selected text itself based on surrounding context.",
+        `Respond in ${targetLanguage}.`,
+        "Focus on meaning, references, tone, and possible ambiguity."
       ].join(" "),
       userPrompt: [
-        "请解释以下翻译结果，尽量简洁但具体。",
+        `Please explain the selected text clearly in ${targetLanguage}.`,
         "",
-        `原文：${selectedText || "(empty)"}`,
-        `译文：${translationText || "(empty)"}`,
-        `上文：${beforeContext || "(empty)"}`,
-        `下文：${afterContext || "(empty)"}`,
+        `Selected text: ${selectedText || "(empty)"}`,
+        `Context before: ${beforeContext || "(empty)"}`,
+        `Context after: ${afterContext || "(empty)"}`,
         "",
-        "输出要求：",
-        "1) 先给出一句总结。",
-        "2) 再用 2-4 条要点说明关键词或语气处理。",
-        "3) 使用简体中文。"
+        "Output requirements:",
+        "1) Start with one concise summary sentence.",
+        "2) Then provide 2-4 bullet points with key details."
       ].join("\n")
     };
   }
@@ -454,7 +467,7 @@ function buildPrompts(message) {
   return {
     systemPrompt: [
       "You are Sense Translate.",
-      "Translate selected text into Simplified Chinese using surrounding context.",
+      `Translate selected text into ${targetLanguage} using surrounding context.`,
       "Keep terminology accurate, natural, concise, and faithful to intent.",
       "Output only the translated text without extra commentary."
     ].join(" "),

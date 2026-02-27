@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = {
   contextBeforeWords: 80,
   contextAfterWords: 80,
   multiTurn: true,
+  targetLanguage: "Simplified Chinese",
   theme: "system"
 };
 
@@ -39,6 +40,7 @@ const providerSelect = document.getElementById("provider");
 const apiKeyInput = document.getElementById("apiKey");
 const baseUrlInput = document.getElementById("baseUrl");
 const modelInput = document.getElementById("model");
+const targetLanguageSelect = document.getElementById("targetLanguage");
 const beforeWordsInput = document.getElementById("beforeWords");
 const afterWordsInput = document.getElementById("afterWords");
 const multiTurnInput = document.getElementById("multiTurn");
@@ -67,6 +69,10 @@ baseUrlInput.addEventListener("input", () => {
 });
 
 modelInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+targetLanguageSelect.addEventListener("change", () => {
   scheduleSave({ updateApiKey: false });
 });
 
@@ -203,6 +209,7 @@ function readForm() {
     provider: providerSelect.value,
     baseUrl: baseUrlInput.value,
     model: modelInput.value,
+    targetLanguage: targetLanguageSelect.value,
     contextBeforeWords: beforeWordsInput.value,
     contextAfterWords: afterWordsInput.value,
     multiTurn: multiTurnInput.checked,
@@ -216,6 +223,8 @@ function fillForm(settings) {
   apiKeyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl;
   modelInput.value = settings.model;
+  ensureSelectHasOption(targetLanguageSelect, settings.targetLanguage);
+  targetLanguageSelect.value = settings.targetLanguage;
   beforeWordsInput.value = String(settings.contextBeforeWords);
   afterWordsInput.value = String(settings.contextAfterWords);
   multiTurnInput.checked = Boolean(settings.multiTurn);
@@ -256,6 +265,7 @@ function normalizeSettings(raw) {
     apiKey: String(raw.apiKey || "").trim(),
     baseUrl: normalizeText(raw.baseUrl, preset.baseUrl).replace(/\/+$/, ""),
     model: normalizeText(raw.model, preset.model),
+    targetLanguage: normalizeTargetLanguage(raw.targetLanguage),
     contextBeforeWords: clampInteger(raw.contextBeforeWords, 0, 1000, DEFAULT_SETTINGS.contextBeforeWords),
     contextAfterWords: clampInteger(raw.contextAfterWords, 0, 1000, DEFAULT_SETTINGS.contextAfterWords),
     multiTurn: typeof raw.multiTurn === "boolean" ? raw.multiTurn : DEFAULT_SETTINGS.multiTurn,
@@ -268,10 +278,29 @@ function normalizeText(value, fallback) {
   return text || fallback;
 }
 
+function normalizeTargetLanguage(value) {
+  const text = String(value ?? "").trim();
+  return text || DEFAULT_SETTINGS.targetLanguage;
+}
+
 function clampInteger(value, min, max, fallback) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) {
     return fallback;
   }
   return Math.min(max, Math.max(min, parsed));
+}
+
+function ensureSelectHasOption(select, value) {
+  if (!value) {
+    return;
+  }
+  const exists = Array.from(select.options).some((option) => option.value === value);
+  if (exists) {
+    return;
+  }
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = value;
+  select.appendChild(option);
 }

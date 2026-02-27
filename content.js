@@ -77,7 +77,8 @@ async function startTranslationFromSelection(fallbackSelectedText) {
     beforeContext: context.beforeContext,
     afterContext: context.afterContext,
     provider: settings.provider,
-    model: settings.model
+    model: settings.model,
+    targetLanguage: settings.targetLanguage
   });
 
   if (activePopup) {
@@ -89,6 +90,7 @@ async function startTranslationFromSelection(fallbackSelectedText) {
   popup.selectedText = selectedText;
   popup.beforeContext = context.beforeContext;
   popup.afterContext = context.afterContext;
+  popup.targetLanguage = settings.targetLanguage;
   activePopup = popup;
 
   const cached = pageCache.get(cacheKey);
@@ -149,6 +151,7 @@ function createPopup({ range, settings }) {
     noteText: root.querySelector('[data-role="note"]'),
     positionHandler: null,
     dragCleanup: null,
+    outsideClickCleanup: null,
     followSelection: true,
     themeCleanup: null,
     themeMode: settings.theme
@@ -164,6 +167,7 @@ function createPopup({ range, settings }) {
   applyTheme(popup, settings.theme);
   bindPositionUpdater(popup);
   bindDragController(popup);
+  bindOutsideCloseHandler(popup);
   setControlsReady(popup, false);
   return popup;
 }
@@ -273,6 +277,34 @@ function bindDragController(popup) {
   };
 }
 
+function bindOutsideCloseHandler(popup) {
+  const onPointerDown = (event) => {
+    if (!activePopup || popup !== activePopup) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+    if (popup.root.contains(target)) {
+      return;
+    }
+    closePopup();
+  };
+
+  // Delay binding to avoid reacting to the click that may have just triggered translation.
+  window.setTimeout(() => {
+    if (!activePopup || popup !== activePopup) {
+      return;
+    }
+    document.addEventListener("pointerdown", onPointerDown, true);
+  }, 0);
+
+  popup.outsideClickCleanup = () => {
+    document.removeEventListener("pointerdown", onPointerDown, true);
+  };
+}
+
 function getRangeRect(range) {
   const rects = range.getClientRects();
   if (rects.length > 0) {
@@ -294,6 +326,10 @@ function closePopup() {
 
   if (typeof activePopup.dragCleanup === "function") {
     activePopup.dragCleanup();
+  }
+
+  if (typeof activePopup.outsideClickCleanup === "function") {
+    activePopup.outsideClickCleanup();
   }
 
   if (typeof activePopup.themeCleanup === "function") {
@@ -424,7 +460,8 @@ function runTranslateStream(popup, { force }) {
       mode: "translate",
       selectedText: popup.selectedText,
       beforeContext: popup.beforeContext,
-      afterContext: popup.afterContext
+      afterContext: popup.afterContext,
+      targetLanguage: popup.targetLanguage
     })
     .then((response) => {
       if (!response?.ok) {
@@ -446,12 +483,6 @@ function runTranslateStream(popup, { force }) {
 
 function runExplainStream(popup) {
   if (!activePopup || popup !== activePopup) {
-    return;
-  }
-
-  const translation = popup.mainText.textContent.trim();
-  if (!translation) {
-    showNote(popup, "Translation is empty.");
     return;
   }
 
@@ -490,7 +521,7 @@ function runExplainStream(popup) {
       const previous = pageCache.get(popup.cacheKey) || {};
       pageCache.set(popup.cacheKey, {
         ...previous,
-        translation: previous.translation || translation,
+        translation: previous.translation || popup.mainText.textContent.trim(),
         explanation: finalText
       });
       popup.positionHandler?.();
@@ -514,7 +545,7 @@ function runExplainStream(popup) {
       selectedText: popup.selectedText,
       beforeContext: popup.beforeContext,
       afterContext: popup.afterContext,
-      translationText: translation
+      targetLanguage: popup.targetLanguage
     })
     .then((response) => {
       if (!response?.ok) {
@@ -550,6 +581,7 @@ async function requestSettings() {
     contextBeforeWords: 80,
     contextAfterWords: 80,
     multiTurn: true,
+    targetLanguage: "Simplified Chinese",
     theme: "system"
   };
 }
@@ -600,13 +632,14 @@ function pickWords(text, count, fromEnd) {
   return words.slice(0, count).join(" ");
 }
 
-function getCacheKey({ selectedText, beforeContext, afterContext, provider, model }) {
+function getCacheKey({ selectedText, beforeContext, afterContext, provider, model, targetLanguage }) {
   return JSON.stringify({
     selectedText: selectedText.trim(),
     beforeContext: beforeContext.trim(),
     afterContext: afterContext.trim(),
     provider,
-    model
+    model,
+    targetLanguage: String(targetLanguage || "").trim()
   });
 }
 

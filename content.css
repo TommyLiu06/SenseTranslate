@@ -41,12 +41,12 @@
   align-items: center;
   gap: 6px;
   padding: 10px 10px 0 10px;
-  cursor: grab;
+  cursor: move;
   user-select: none;
 }
 
 .sense-translate-header.is-dragging {
-  cursor: grabbing;
+  cursor: move;
 }
 
 .sense-translate-popup.is-dragging {
