@@ -44,8 +44,12 @@
   align-items: center;
   gap: 6px;
   padding: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--st-border) 85%, transparent);
-  background: color-mix(in srgb, var(--st-bg) 70%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-bg) 84%, transparent) 0%,
+    color-mix(in srgb, var(--st-bg) 56%, transparent) 58%,
+    color-mix(in srgb, var(--st-bg) 0%, transparent) 100%
+  );
   cursor: move;
   user-select: none;
 }
