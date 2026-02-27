@@ -8,11 +8,15 @@
   box-sizing: border-box;
 }
 
+html,
 body {
-  margin: 0;
   width: 368px;
   min-width: 368px;
   max-width: 368px;
+}
+
+body {
+  margin: 0;
   overflow-x: hidden;
   background: linear-gradient(160deg, #f6f8fc, #edf2fb);
   font-family: "IBM Plex Sans", "SF Pro Text", "Segoe UI", sans-serif;
@@ -25,7 +29,8 @@ body[data-theme="dark"] {
 }
 
 .panel {
-  width: 100%;
+  width: 368px;
+  max-width: 368px;
   padding: 14px;
 }
 
@@ -46,6 +51,8 @@ h1 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .field {
@@ -79,6 +86,12 @@ select {
 .field:not(.inline) input,
 .field select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.field select {
+  text-overflow: ellipsis;
 }
 
 .hidden {

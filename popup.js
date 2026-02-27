@@ -1,5 +1,6 @@
 const AUTO_SAVE_DELAY_MS = 350;
 const CUSTOM_MODEL_OPTION = "__custom_model__";
+const POPUP_FIXED_WIDTH_PX = 368;
 
 const PROVIDER_PRESETS = {
   deepseek: {
@@ -95,6 +96,8 @@ let saveTimerId = null;
 let pendingSaveOptions = { updateApiKey: false };
 let saveChain = Promise.resolve();
 let themeCleanup = null;
+
+lockPopupWidth();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -382,6 +385,7 @@ function formatModelOptionLabel(item) {
 function applyModelInputVisibility() {
   const useCustomModel = modelPresetSelect.value === CUSTOM_MODEL_OPTION;
   modelCustomInput.classList.toggle("hidden", !useCustomModel);
+  lockPopupWidth();
 }
 
 function getModelFromInputs() {
@@ -442,4 +446,15 @@ function ensureSelectHasOption(select, value) {
 function updateApiKeyPlaceholder(provider) {
   const resolvedProvider = provider in PROVIDER_API_KEY_PLACEHOLDER ? provider : DEFAULT_SETTINGS.provider;
   apiKeyInput.placeholder = PROVIDER_API_KEY_PLACEHOLDER[resolvedProvider] || "API key";
+}
+
+function lockPopupWidth() {
+  const width = `${POPUP_FIXED_WIDTH_PX}px`;
+  document.documentElement.style.width = width;
+  document.documentElement.style.minWidth = width;
+  document.documentElement.style.maxWidth = width;
+  document.documentElement.style.overflowX = "hidden";
+  document.body.style.width = width;
+  document.body.style.minWidth = width;
+  document.body.style.maxWidth = width;
 }
