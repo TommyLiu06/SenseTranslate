@@ -44,7 +44,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px;
-  background: color-mix(in srgb, var(--st-bg) 70%, transparent);
+  background: transparent;
   cursor: move;
   user-select: none;
 }
