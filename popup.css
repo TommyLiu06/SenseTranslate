@@ -2,22 +2,8 @@
   color-scheme: light dark;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  width: 368px;
-  min-width: 368px;
-  max-width: 368px;
-}
-
 body {
   margin: 0;
-  overflow-x: hidden;
   background: linear-gradient(160deg, #f6f8fc, #edf2fb);
   font-family: "IBM Plex Sans", "SF Pro Text", "Segoe UI", sans-serif;
   color: #1a2331;
@@ -29,8 +15,7 @@ body[data-theme="dark"] {
 }
 
 .panel {
-  width: 368px;
-  max-width: 368px;
+  width: 340px;
   padding: 14px;
 }
 
@@ -44,22 +29,18 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 0;
 }
 
 .grid-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  width: 100%;
-  min-width: 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 0;
 }
 
 .field > span {
@@ -81,17 +62,6 @@ select {
   color: inherit;
   padding: 8px 10px;
   font-size: 13px;
-}
-
-.field:not(.inline) input,
-.field select {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.field select {
-  text-overflow: ellipsis;
 }
 
 .hidden {

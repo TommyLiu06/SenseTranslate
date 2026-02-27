@@ -1,6 +1,5 @@
 const AUTO_SAVE_DELAY_MS = 350;
 const CUSTOM_MODEL_OPTION = "__custom_model__";
-const POPUP_FIXED_WIDTH_PX = 368;
 
 const PROVIDER_PRESETS = {
   deepseek: {
@@ -96,8 +95,8 @@ let saveTimerId = null;
 let pendingSaveOptions = { updateApiKey: false };
 let saveChain = Promise.resolve();
 let themeCleanup = null;
-
-lockPopupWidth();
+let popupBaseHeight = 0;
+let popupManualExtraHeight = 0;
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -170,10 +169,14 @@ async function load() {
     const settings = normalizeSettings(response.settings);
     fillForm(settings);
     applyPopupTheme(settings.theme);
+    initializePopupHeightController();
+    applyPopupHeightMode(modelPresetSelect.value === CUSTOM_MODEL_OPTION);
     setStatus("");
   } catch (error) {
     fillForm(DEFAULT_SETTINGS);
     applyPopupTheme(DEFAULT_SETTINGS.theme);
+    initializePopupHeightController();
+    applyPopupHeightMode(modelPresetSelect.value === CUSTOM_MODEL_OPTION);
     setStatus(`Load failed: ${error.message || String(error)}`, true);
   }
 }
@@ -385,7 +388,7 @@ function formatModelOptionLabel(item) {
 function applyModelInputVisibility() {
   const useCustomModel = modelPresetSelect.value === CUSTOM_MODEL_OPTION;
   modelCustomInput.classList.toggle("hidden", !useCustomModel);
-  lockPopupWidth();
+  applyPopupHeightMode(useCustomModel);
 }
 
 function getModelFromInputs() {
@@ -448,13 +451,33 @@ function updateApiKeyPlaceholder(provider) {
   apiKeyInput.placeholder = PROVIDER_API_KEY_PLACEHOLDER[resolvedProvider] || "API key";
 }
 
-function lockPopupWidth() {
-  const width = `${POPUP_FIXED_WIDTH_PX}px`;
-  document.documentElement.style.width = width;
-  document.documentElement.style.minWidth = width;
-  document.documentElement.style.maxWidth = width;
-  document.documentElement.style.overflowX = "hidden";
-  document.body.style.width = width;
-  document.body.style.minWidth = width;
-  document.body.style.maxWidth = width;
+function initializePopupHeightController() {
+  if (popupBaseHeight > 0) {
+    return;
+  }
+  const wasHidden = modelCustomInput.classList.contains("hidden");
+
+  modelCustomInput.classList.add("hidden");
+  popupBaseHeight = Math.ceil(Math.max(document.body.scrollHeight, document.documentElement.scrollHeight));
+
+  modelCustomInput.classList.remove("hidden");
+  popupManualExtraHeight = Math.ceil(modelCustomInput.getBoundingClientRect().height + 8);
+
+  if (wasHidden) {
+    modelCustomInput.classList.add("hidden");
+  }
+}
+
+function applyPopupHeightMode(useCustomModel) {
+  if (popupBaseHeight <= 0) {
+    return;
+  }
+  const targetHeight = useCustomModel
+    ? popupBaseHeight + popupManualExtraHeight
+    : popupBaseHeight;
+  const target = `${targetHeight}px`;
+  document.documentElement.style.height = target;
+  document.body.style.height = target;
+  document.documentElement.style.overflowY = "hidden";
+  document.body.style.overflowY = "hidden";
 }
