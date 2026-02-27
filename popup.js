@@ -114,6 +114,13 @@ baseUrlInput.addEventListener("input", () => {
 
 modelPresetSelect.addEventListener("change", () => {
   applyModelInputVisibility();
+
+  // Keep manual input visible until user types a model id.
+  if (modelPresetSelect.value === CUSTOM_MODEL_OPTION && !modelCustomInput.value.trim()) {
+    modelCustomInput.focus();
+    return;
+  }
+
   scheduleSave({ updateApiKey: false });
 });
 
@@ -151,7 +158,7 @@ window.addEventListener("unload", () => {
 void load();
 
 async function load() {
-  setStatus("Loading...");
+  setStatus("");
   try {
     const response = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
     if (!response?.ok || !response.settings) {
@@ -160,7 +167,7 @@ async function load() {
     const settings = normalizeSettings(response.settings);
     fillForm(settings);
     applyPopupTheme(settings.theme);
-    setStatus("Saved");
+    setStatus("");
   } catch (error) {
     fillForm(DEFAULT_SETTINGS);
     applyPopupTheme(DEFAULT_SETTINGS.theme);
@@ -230,7 +237,6 @@ function queueSave(options) {
 }
 
 async function persistSettings(options) {
-  setStatus("Saving...");
   const payload = normalizeSettings(readForm());
   const request = {
     type: "SAVE_SETTINGS",
@@ -251,7 +257,7 @@ async function persistSettings(options) {
   const saved = normalizeSettings(response.settings);
   fillForm(saved);
   applyPopupTheme(saved.theme);
-  setStatus("Saved");
+  setStatus("");
 }
 
 function readForm() {
