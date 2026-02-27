@@ -372,7 +372,7 @@ function clearConversationForTab(tabId) {
   }
 }
 
-function getConversationKey(sender) {
+function getConversationKey(sender, mode) {
   const tabId = sender?.tab?.id ?? -1;
   let pageKey = sender?.url || sender?.tab?.url || "unknown";
   try {
@@ -381,7 +381,8 @@ function getConversationKey(sender) {
   } catch (_) {
     // Keep fallback string.
   }
-  return `${tabId}:${pageKey}`;
+  const safeMode = mode === "explain" ? "explain" : "translate";
+  return `${tabId}:${pageKey}:${safeMode}`;
 }
 
 async function handleStreamRequest(message, sender) {
@@ -394,7 +395,7 @@ async function handleStreamRequest(message, sender) {
     throw new Error("Please set API Key in Sense Translate settings.");
   }
 
-  const conversationKey = getConversationKey(sender);
+  const conversationKey = getConversationKey(sender, message.mode);
   const contextMessages = settings.multiTurn ? conversationMemory.get(conversationKey) || [] : [];
   const { systemPrompt, userPrompt } = buildPrompts(message, settings);
   const messages = [
