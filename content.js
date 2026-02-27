@@ -370,6 +370,18 @@ function hideExplanation(popup) {
   popup.divider.style.display = "none";
   popup.explainText.style.display = "none";
   popup.explainText.textContent = "";
+  popup.explainText.classList.remove("is-loading");
+}
+
+function clearExplanationCache(popup) {
+  const previous = pageCache.get(popup.cacheKey);
+  if (!previous) {
+    return;
+  }
+  pageCache.set(popup.cacheKey, {
+    ...previous,
+    explanation: ""
+  });
 }
 
 function showExplanation(popup, text) {
@@ -391,6 +403,10 @@ function clearNote(popup) {
 function runTranslateStream(popup, { force }) {
   if (!activePopup || popup !== activePopup) {
     return;
+  }
+
+  if (force) {
+    clearExplanationCache(popup);
   }
 
   clearNote(popup);

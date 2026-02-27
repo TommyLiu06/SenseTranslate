@@ -1,4 +1,5 @@
 const AUTO_SAVE_DELAY_MS = 350;
+const CUSTOM_MODEL_OPTION = "__custom_model__";
 
 const PROVIDER_PRESETS = {
   deepseek: {
@@ -23,6 +24,40 @@ const PROVIDER_PRESETS = {
   }
 };
 
+const PROVIDER_MODELS = {
+  deepseek: [
+    { id: "deepseek-chat", label: "DeepSeek Chat", recommended: true, fastest: true },
+    { id: "deepseek-reasoner", label: "DeepSeek Reasoner", recommended: false, fastest: false }
+  ],
+  glm: [
+    { id: "glm-4.5-air", label: "GLM 4.5 Air", recommended: true, fastest: true },
+    { id: "glm-4.6", label: "GLM 4.6", recommended: true, fastest: false },
+    { id: "glm-4.7", label: "GLM 4.7", recommended: false, fastest: false },
+    { id: "glm-4.5", label: "GLM 4.5", recommended: false, fastest: false }
+  ],
+  glm_coding: [
+    { id: "glm-4.5-air", label: "GLM 4.5 Air", recommended: true, fastest: true },
+    { id: "glm-4.6", label: "GLM 4.6", recommended: true, fastest: false },
+    { id: "glm-4.7", label: "GLM 4.7", recommended: false, fastest: false },
+    { id: "codegeex-4", label: "CodeGeeX 4", recommended: false, fastest: false }
+  ],
+  qwen: [
+    { id: "qwen-turbo", label: "Qwen Turbo", recommended: true, fastest: true },
+    { id: "qwen-plus", label: "Qwen Plus", recommended: true, fastest: false },
+    { id: "qwen-max", label: "Qwen Max", recommended: false, fastest: false },
+    { id: "qwen3-coder-flash", label: "Qwen3 Coder Flash", recommended: false, fastest: false },
+    { id: "qwen3-coder-plus", label: "Qwen3 Coder Plus", recommended: false, fastest: false }
+  ],
+  openai: [
+    { id: "gpt-5-nano", label: "GPT-5 Nano", recommended: false, fastest: true },
+    { id: "gpt-5-mini", label: "GPT-5 Mini", recommended: true, fastest: false },
+    { id: "gpt-5", label: "GPT-5", recommended: false, fastest: false },
+    { id: "gpt-4.1-mini", label: "GPT-4.1 Mini", recommended: true, fastest: false },
+    { id: "gpt-4.1", label: "GPT-4.1", recommended: false, fastest: false },
+    { id: "gpt-4o-mini", label: "GPT-4o Mini", recommended: false, fastest: false }
+  ]
+};
+
 const DEFAULT_SETTINGS = {
   provider: "deepseek",
   apiKey: "",
@@ -39,7 +74,8 @@ const form = document.getElementById("settings-form");
 const providerSelect = document.getElementById("provider");
 const apiKeyInput = document.getElementById("apiKey");
 const baseUrlInput = document.getElementById("baseUrl");
-const modelInput = document.getElementById("model");
+const modelPresetSelect = document.getElementById("modelPreset");
+const modelCustomInput = document.getElementById("modelCustom");
 const targetLanguageSelect = document.getElementById("targetLanguage");
 const beforeWordsInput = document.getElementById("beforeWords");
 const afterWordsInput = document.getElementById("afterWords");
@@ -68,7 +104,12 @@ baseUrlInput.addEventListener("input", () => {
   scheduleSave({ updateApiKey: false });
 });
 
-modelInput.addEventListener("input", () => {
+modelPresetSelect.addEventListener("change", () => {
+  applyModelInputVisibility();
+  scheduleSave({ updateApiKey: false });
+});
+
+modelCustomInput.addEventListener("input", () => {
   scheduleSave({ updateApiKey: false });
 });
 
@@ -126,7 +167,7 @@ async function handleProviderChange() {
   const preset = PROVIDER_PRESETS[provider];
   if (preset) {
     baseUrlInput.value = preset.baseUrl;
-    modelInput.value = preset.model;
+    syncModelControls(provider, preset.model);
   }
 
   try {
@@ -208,7 +249,7 @@ function readForm() {
   return {
     provider: providerSelect.value,
     baseUrl: baseUrlInput.value,
-    model: modelInput.value,
+    model: getModelFromInputs(),
     targetLanguage: targetLanguageSelect.value,
     contextBeforeWords: beforeWordsInput.value,
     contextAfterWords: afterWordsInput.value,
@@ -222,7 +263,7 @@ function fillForm(settings) {
   providerSelect.value = settings.provider;
   apiKeyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl;
-  modelInput.value = settings.model;
+  syncModelControls(settings.provider, settings.model);
   ensureSelectHasOption(targetLanguageSelect, settings.targetLanguage);
   targetLanguageSelect.value = settings.targetLanguage;
   beforeWordsInput.value = String(settings.contextBeforeWords);
@@ -255,6 +296,83 @@ function applyPopupTheme(mode) {
   media.addEventListener("change", listener);
   themeCleanup = () => media.removeEventListener("change", listener);
   apply();
+}
+
+function syncModelControls(provider, modelValue) {
+  const modelOptions = getProviderModelOptions(provider);
+  renderModelOptions(modelOptions);
+
+  const defaultModel = PROVIDER_PRESETS[provider]?.model || DEFAULT_SETTINGS.model;
+  const normalizedModel = normalizeText(modelValue, defaultModel);
+  const hasPreset = modelOptions.some((item) => item.id === normalizedModel);
+
+  if (hasPreset) {
+    modelPresetSelect.value = normalizedModel;
+    modelCustomInput.value = "";
+  } else {
+    modelPresetSelect.value = CUSTOM_MODEL_OPTION;
+    modelCustomInput.value = normalizedModel;
+  }
+  applyModelInputVisibility();
+}
+
+function getProviderModelOptions(provider) {
+  const preset = PROVIDER_PRESETS[provider] || PROVIDER_PRESETS[DEFAULT_SETTINGS.provider];
+  const source = Array.isArray(PROVIDER_MODELS[provider]) ? PROVIDER_MODELS[provider] : [];
+  const options = [...source];
+
+  if (!options.some((item) => item.id === preset.model)) {
+    options.push({
+      id: preset.model,
+      label: preset.model,
+      recommended: true,
+      fastest: false
+    });
+  }
+
+  return options;
+}
+
+function renderModelOptions(modelOptions) {
+  modelPresetSelect.innerHTML = "";
+  for (const item of modelOptions) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = formatModelOptionLabel(item);
+    modelPresetSelect.appendChild(option);
+  }
+
+  const customOption = document.createElement("option");
+  customOption.value = CUSTOM_MODEL_OPTION;
+  customOption.textContent = "Manual input";
+  modelPresetSelect.appendChild(customOption);
+}
+
+function formatModelOptionLabel(item) {
+  const tags = [];
+  if (item.recommended) {
+    tags.push("Recommended");
+  }
+  if (item.fastest) {
+    tags.push("Fastest");
+  }
+  const baseLabel = item.label ? `${item.label} [${item.id}]` : item.id;
+  if (tags.length === 0) {
+    return baseLabel;
+  }
+  return `${baseLabel} (${tags.join(", ")})`;
+}
+
+function applyModelInputVisibility() {
+  const useCustomModel = modelPresetSelect.value === CUSTOM_MODEL_OPTION;
+  modelCustomInput.classList.toggle("hidden", !useCustomModel);
+}
+
+function getModelFromInputs() {
+  if (modelPresetSelect.value === CUSTOM_MODEL_OPTION) {
+    return modelCustomInput.value.trim();
+  }
+  return modelPresetSelect.value;
 }
 
 function normalizeSettings(raw) {

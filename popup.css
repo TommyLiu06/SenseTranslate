@@ -64,6 +64,10 @@ select {
   font-size: 13px;
 }
 
+.hidden {
+  display: none;
+}
+
 .autosave-hint {
   margin: 0;
   font-size: 12px;
