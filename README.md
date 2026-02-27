@@ -6,16 +6,28 @@ Sense Translate is a Chrome extension for context-aware translation and explanat
 This repository contains code and documentation that were generated with AI assistance and then iterated by a human maintainer.
 
 ## Features
-- Right-click selected text to translate with surrounding context.
 - Streaming translation and explanation output.
-- Provider/model configurable settings in popup.
-- In-page floating translation window with light/dark/system theme support.
+- Context-aware translation using selected text plus nearby context.
+- In-page floating translation window with draggable position and follow behavior.
+- Explain mode for selected text meaning and context.
+- Provider and model configuration in extension popup.
+- Theme support: light, dark, and system.
 
-## Development
+## Installation
 1. Clone the repository.
 2. Open Chrome and go to `chrome://extensions`.
 3. Enable **Developer mode**.
 4. Click **Load unpacked** and select this project folder.
+
+## Usage
+1. Select text on any webpage.
+2. Right-click and choose **Sense Translate**.
+3. Read the translation in the popup below the selected content.
+4. Use toolbar buttons in the popup:
+   - `close`: close the popup.
+   - `explain`: generate an explanation for the selected text.
+   - `retry`: rerun translation.
+5. Click the extension icon in the browser toolbar to open settings and configure provider, model, API key, context length, target language, and theme.
 
 ## License
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
