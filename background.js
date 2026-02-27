@@ -372,7 +372,7 @@ function clearConversationForTab(tabId) {
   }
 }
 
-function getConversationKey(sender, mode) {
+function getConversationKey(sender) {
   const tabId = sender?.tab?.id ?? -1;
   let pageKey = sender?.url || sender?.tab?.url || "unknown";
   try {
@@ -381,8 +381,7 @@ function getConversationKey(sender, mode) {
   } catch (_) {
     // Keep fallback string.
   }
-  const safeMode = mode === "explain" ? "explain" : "translate";
-  return `${tabId}:${pageKey}:${safeMode}`;
+  return `${tabId}:${pageKey}`;
 }
 
 async function handleStreamRequest(message, sender) {
@@ -395,7 +394,7 @@ async function handleStreamRequest(message, sender) {
     throw new Error("Please set API Key in Sense Translate settings.");
   }
 
-  const conversationKey = getConversationKey(sender, message.mode);
+  const conversationKey = getConversationKey(sender);
   const contextMessages = settings.multiTurn ? conversationMemory.get(conversationKey) || [] : [];
   const { systemPrompt, userPrompt } = buildPrompts(message, settings);
   const messages = [
@@ -447,11 +446,13 @@ function buildPrompts(message, settings) {
     return {
       systemPrompt: [
         "You are Sense Translate.",
+        "Current task: EXPLAIN_SELECTED_TEXT.",
         "Explain the selected text itself based on surrounding context.",
         `Respond in ${targetLanguage}.`,
         "Focus on meaning, references, tone, and possible ambiguity."
       ].join(" "),
       userPrompt: [
+        "TASK=EXPLAIN_SELECTED_TEXT",
         `Please explain the selected text clearly in ${targetLanguage}.`,
         "",
         `Selected text: ${selectedText || "(empty)"}`,
@@ -468,11 +469,13 @@ function buildPrompts(message, settings) {
   return {
     systemPrompt: [
       "You are Sense Translate.",
+      "Current task: TRANSLATE.",
       `Translate selected text into ${targetLanguage} using surrounding context.`,
       "Keep terminology accurate, natural, concise, and faithful to intent.",
       "Output only the translated text without extra commentary."
     ].join(" "),
     userPrompt: [
+      "TASK=TRANSLATE",
       `Selected text:\n${selectedText || "(empty)"}`,
       `Context before:\n${beforeContext || "(empty)"}`,
       `Context after:\n${afterContext || "(empty)"}`
