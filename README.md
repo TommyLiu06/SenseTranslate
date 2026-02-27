@@ -20,14 +20,14 @@ This repository contains code and documentation that were generated with AI assi
 4. Click **Load unpacked** and select this project folder.
 
 ## Usage
-1. Select text on any webpage.
-2. Right-click and choose **Sense Translate**.
-3. Read the translation in the popup below the selected content.
-4. Use toolbar buttons in the popup:
+1. Click the extension icon in the browser toolbar and configure provider, model, API key, context length, target language, and theme.
+2. Select text on any webpage.
+3. Right-click and choose **Sense Translate**.
+4. Read the translation in the popup below the selected content.
+5. Use toolbar buttons in the popup:
    - `close`: close the popup.
    - `explain`: generate an explanation for the selected text.
    - `retry`: rerun translation.
-5. Click the extension icon in the browser toolbar to open settings and configure provider, model, API key, context length, target language, and theme.
 
 ## License
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
