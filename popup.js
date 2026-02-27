@@ -24,6 +24,14 @@ const PROVIDER_PRESETS = {
   }
 };
 
+const PROVIDER_API_KEY_PLACEHOLDER = {
+  deepseek: "DeepSeek API key",
+  glm: "GLM API key",
+  glm_coding: "GLM Coding API key",
+  qwen: "DashScope API key",
+  openai: "OpenAI API key"
+};
+
 const PROVIDER_MODELS = {
   deepseek: [
     { id: "deepseek-chat", label: "DeepSeek Chat", recommended: true, fastest: true },
@@ -164,6 +172,7 @@ async function handleProviderChange() {
   await flushScheduledSave();
 
   const provider = providerSelect.value;
+  updateApiKeyPlaceholder(provider);
   const preset = PROVIDER_PRESETS[provider];
   if (preset) {
     baseUrlInput.value = preset.baseUrl;
@@ -261,6 +270,7 @@ function readForm() {
 
 function fillForm(settings) {
   providerSelect.value = settings.provider;
+  updateApiKeyPlaceholder(settings.provider);
   apiKeyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl;
   syncModelControls(settings.provider, settings.model);
@@ -349,6 +359,7 @@ function renderModelOptions(modelOptions) {
 }
 
 function formatModelOptionLabel(item) {
+  const baseLabel = item.id;
   const tags = [];
   if (item.recommended) {
     tags.push("Recommended");
@@ -356,7 +367,6 @@ function formatModelOptionLabel(item) {
   if (item.fastest) {
     tags.push("Fastest");
   }
-  const baseLabel = item.label ? `${item.label} [${item.id}]` : item.id;
   if (tags.length === 0) {
     return baseLabel;
   }
@@ -421,4 +431,9 @@ function ensureSelectHasOption(select, value) {
   option.value = value;
   option.textContent = value;
   select.appendChild(option);
+}
+
+function updateApiKeyPlaceholder(provider) {
+  const resolvedProvider = provider in PROVIDER_API_KEY_PLACEHOLDER ? provider : DEFAULT_SETTINGS.provider;
+  apiKeyInput.placeholder = PROVIDER_API_KEY_PLACEHOLDER[resolvedProvider] || "API key";
 }
