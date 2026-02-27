@@ -92,11 +92,29 @@
 .sense-translate-content {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
   padding: 8px 12px 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--st-accent) 55%, transparent) transparent;
+}
+
+.sense-translate-content::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-bg) 100%, transparent) 0%,
+    color-mix(in srgb, var(--st-bg) 78%, transparent) 45%,
+    color-mix(in srgb, var(--st-bg) 0%, transparent) 100%
+  );
 }
 
 .sense-translate-content::-webkit-scrollbar {
