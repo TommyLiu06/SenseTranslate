@@ -1,0 +1,95 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(160deg, #f6f8fc, #edf2fb);
+  font-family: "IBM Plex Sans", "SF Pro Text", "Segoe UI", sans-serif;
+  color: #1a2331;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(160deg, #131a24, #1e2733);
+    color: #eaf0ff;
+  }
+}
+
+.panel {
+  width: 340px;
+  padding: 14px;
+}
+
+h1 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+#settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+input,
+select,
+button {
+  border: 1px solid rgba(29, 43, 66, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+button {
+  cursor: pointer;
+  background: linear-gradient(140deg, #2b6ef2, #4b94ff);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+}
+
+button:hover {
+  box-shadow: 0 0 0 1px rgba(43, 110, 242, 0.3), 0 0 15px rgba(43, 110, 242, 0.25);
+}
+
+#status {
+  margin: 0;
+  min-height: 16px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+@media (prefers-color-scheme: dark) {
+  input,
+  select {
+    border-color: rgba(230, 239, 255, 0.18);
+    background: rgba(30, 38, 49, 0.9);
+  }
+}

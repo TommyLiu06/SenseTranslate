@@ -1,0 +1,124 @@
+.sense-translate-popup {
+  --st-bg: #f9fafc;
+  --st-text: #17212f;
+  --st-subtext: #546074;
+  --st-border: rgba(23, 33, 47, 0.12);
+  --st-shadow: 0 14px 40px rgba(23, 33, 47, 0.22);
+  --st-btn-bg: rgba(255, 255, 255, 0.9);
+  --st-btn-border: rgba(23, 33, 47, 0.15);
+  --st-btn-hover: rgba(80, 132, 255, 0.14);
+  --st-accent: #2a6cf2;
+  position: absolute;
+  z-index: 2147483646;
+  width: min(440px, calc(100vw - 24px));
+  max-height: 62vh;
+  overflow: auto;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 254, 0.96));
+  color: var(--st-text);
+  border: 1px solid var(--st-border);
+  border-radius: 14px;
+  box-shadow: var(--st-shadow);
+  backdrop-filter: blur(8px);
+  font-family: "SF Pro Text", "IBM Plex Sans", "Segoe UI", sans-serif;
+  animation: st-fade-in 140ms ease-out;
+}
+
+.sense-translate-popup[data-theme="dark"] {
+  --st-bg: #141922;
+  --st-text: #ecf1ff;
+  --st-subtext: #9ca7bd;
+  --st-border: rgba(235, 241, 255, 0.15);
+  --st-shadow: 0 16px 48px rgba(3, 6, 12, 0.52);
+  --st-btn-bg: rgba(30, 36, 48, 0.92);
+  --st-btn-border: rgba(236, 241, 255, 0.18);
+  --st-btn-hover: rgba(102, 157, 255, 0.24);
+  --st-accent: #8db0ff;
+  background: linear-gradient(160deg, rgba(20, 25, 34, 0.96), rgba(30, 36, 48, 0.95));
+}
+
+.sense-translate-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 0 10px;
+}
+
+.sense-translate-btn {
+  border: 1px solid var(--st-btn-border);
+  background: var(--st-btn-bg);
+  color: var(--st-text);
+  border-radius: 9px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.sense-translate-btn:hover {
+  background: var(--st-btn-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(42, 108, 242, 0.22), 0 0 18px rgba(42, 108, 242, 0.22);
+}
+
+.sense-translate-content {
+  padding: 8px 12px 12px 12px;
+}
+
+.sense-translate-main {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--st-text);
+}
+
+.sense-translate-main.is-loading::after {
+  content: "▋";
+  margin-left: 2px;
+  color: var(--st-accent);
+  animation: st-caret 0.85s steps(1) infinite;
+}
+
+.sense-translate-divider {
+  margin: 10px 0 8px 0;
+  border: none;
+  border-top: 1px dashed var(--st-border);
+}
+
+.sense-translate-explain {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--st-subtext);
+}
+
+.sense-translate-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--st-subtext);
+}
+
+@keyframes st-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes st-caret {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sense Translate</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Sense Translate</h1>
+      <form id="settings-form">
+        <label class="field">
+          <span>Provider</span>
+          <select id="provider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="glm">GLM</option>
+            <option value="glm_coding">GLM Coding</option>
+            <option value="qwen">Qwen</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>API Key</span>
+          <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Base URL</span>
+          <input id="baseUrl" type="text" placeholder="https://..." />
+        </label>
+
+        <label class="field">
+          <span>Model</span>
+          <input id="model" type="text" placeholder="model-id" />
+        </label>
+
+        <div class="grid-two">
+          <label class="field">
+            <span>Before Words</span>
+            <input id="beforeWords" type="number" min="0" max="1000" />
+          </label>
+          <label class="field">
+            <span>After Words</span>
+            <input id="afterWords" type="number" min="0" max="1000" />
+          </label>
+        </div>
+
+        <label class="field inline">
+          <input id="multiTurn" type="checkbox" />
+          <span>Use multi-turn context</span>
+        </label>
+
+        <label class="field">
+          <span>Theme</span>
+          <select id="theme">
+            <option value="system">Follow System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+
+        <button id="saveBtn" type="submit">Save</button>
+        <p id="status"></p>
+      </form>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
