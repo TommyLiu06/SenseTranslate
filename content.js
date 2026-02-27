@@ -1,3 +1,4 @@
+const SETTINGS_KEY = "senseTranslateSettings";
 const pageCache = new Map();
 const pendingStreams = new Map();
 
@@ -38,6 +39,23 @@ chrome.runtime.onMessage.addListener((message) => {
       stream.onError(message.error || "Unknown stream error.");
     }
   }
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "sync") {
+    return;
+  }
+
+  const settingsChange = changes[SETTINGS_KEY];
+  if (!settingsChange?.newValue) {
+    return;
+  }
+
+  if (!activePopup) {
+    return;
+  }
+
+  applyTheme(activePopup, normalizeThemeMode(settingsChange.newValue.theme));
 });
 
 async function startTranslationFromSelection(fallbackSelectedText) {
@@ -95,9 +113,15 @@ function createPopup({ range, settings }) {
   root.className = "sense-translate-popup";
   root.innerHTML = `
     <header class="sense-translate-header">
-      <button class="sense-translate-btn" data-role="close">close</button>
-      <button class="sense-translate-btn" data-role="explain" style="display:none;">explain</button>
-      <button class="sense-translate-btn" data-role="retry" style="display:none;">retry</button>
+      <button class="sense-translate-btn" data-role="close" title="close" aria-label="close">
+        <span aria-hidden="true">✕</span>
+      </button>
+      <button class="sense-translate-btn" data-role="explain" title="explain" aria-label="explain" style="display:none;">
+        <span aria-hidden="true">✦</span>
+      </button>
+      <button class="sense-translate-btn" data-role="retry" title="retry" aria-label="retry" style="display:none;">
+        <span aria-hidden="true">↻</span>
+      </button>
     </header>
     <div class="sense-translate-content">
       <div class="sense-translate-main is-loading" data-role="main">Translating...</div>
@@ -115,6 +139,7 @@ function createPopup({ range, settings }) {
     root,
     range,
     requestIds: new Set(),
+    header: root.querySelector(".sense-translate-header"),
     closeButton: root.querySelector('[data-role="close"]'),
     explainButton: root.querySelector('[data-role="explain"]'),
     retryButton: root.querySelector('[data-role="retry"]'),
@@ -123,6 +148,8 @@ function createPopup({ range, settings }) {
     explainText: root.querySelector('[data-role="explain-content"]'),
     noteText: root.querySelector('[data-role="note"]'),
     positionHandler: null,
+    dragCleanup: null,
+    followSelection: true,
     themeCleanup: null,
     themeMode: settings.theme
   };
@@ -136,12 +163,17 @@ function createPopup({ range, settings }) {
 
   applyTheme(popup, settings.theme);
   bindPositionUpdater(popup);
+  bindDragController(popup);
   setControlsReady(popup, false);
   return popup;
 }
 
 function bindPositionUpdater(popup) {
+  popup.root.style.position = "absolute";
   const updatePosition = () => {
+    if (!popup.followSelection) {
+      return;
+    }
     if (!popup.root.isConnected) {
       return;
     }
@@ -161,6 +193,86 @@ function bindPositionUpdater(popup) {
   updatePosition();
 }
 
+function detachPositionUpdater(popup) {
+  if (!popup.positionHandler) {
+    return;
+  }
+  window.removeEventListener("scroll", popup.positionHandler, true);
+  window.removeEventListener("resize", popup.positionHandler, true);
+  popup.positionHandler = null;
+}
+
+function bindDragController(popup) {
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  const onPointerMove = (event) => {
+    if (!dragging) {
+      return;
+    }
+
+    const margin = 6;
+    const maxLeft = Math.max(margin, window.innerWidth - popup.root.offsetWidth - margin);
+    const maxTop = Math.max(margin, window.innerHeight - popup.root.offsetHeight - margin);
+    const nextLeft = clamp(event.clientX - offsetX, margin, maxLeft);
+    const nextTop = clamp(event.clientY - offsetY, margin, maxTop);
+
+    popup.root.style.left = `${nextLeft}px`;
+    popup.root.style.top = `${nextTop}px`;
+  };
+
+  const onPointerUp = () => {
+    if (!dragging) {
+      return;
+    }
+    dragging = false;
+    popup.root.classList.remove("is-dragging");
+    popup.header.classList.remove("is-dragging");
+    document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
+    document.removeEventListener("pointercancel", onPointerUp, true);
+  };
+
+  const onPointerDown = (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const target = event.target;
+    if (target instanceof Element && target.closest(".sense-translate-btn")) {
+      return;
+    }
+
+    const rect = popup.root.getBoundingClientRect();
+    popup.followSelection = false;
+    detachPositionUpdater(popup);
+    popup.root.style.position = "fixed";
+    popup.root.style.left = `${rect.left}px`;
+    popup.root.style.top = `${rect.top}px`;
+    popup.root.style.right = "auto";
+    popup.root.style.bottom = "auto";
+
+    dragging = true;
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+    popup.root.classList.add("is-dragging");
+    popup.header.classList.add("is-dragging");
+    document.addEventListener("pointermove", onPointerMove, true);
+    document.addEventListener("pointerup", onPointerUp, true);
+    document.addEventListener("pointercancel", onPointerUp, true);
+    event.preventDefault();
+  };
+
+  popup.header.addEventListener("pointerdown", onPointerDown, true);
+  popup.dragCleanup = () => {
+    popup.header.removeEventListener("pointerdown", onPointerDown, true);
+    document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointerup", onPointerUp, true);
+    document.removeEventListener("pointercancel", onPointerUp, true);
+  };
+}
+
 function getRangeRect(range) {
   const rects = range.getClientRects();
   if (rects.length > 0) {
@@ -178,9 +290,10 @@ function closePopup() {
     pendingStreams.delete(requestId);
   }
 
-  if (activePopup.positionHandler) {
-    window.removeEventListener("scroll", activePopup.positionHandler, true);
-    window.removeEventListener("resize", activePopup.positionHandler, true);
+  detachPositionUpdater(activePopup);
+
+  if (typeof activePopup.dragCleanup === "function") {
+    activePopup.dragCleanup();
   }
 
   if (typeof activePopup.themeCleanup === "function") {
@@ -439,6 +552,13 @@ async function requestSettings() {
     multiTurn: true,
     theme: "system"
   };
+}
+
+function normalizeThemeMode(value) {
+  if (value === "light" || value === "dark" || value === "system") {
+    return value;
+  }
+  return "system";
 }
 
 function extractContextFromRange(range, beforeWordCount, afterWordCount) {

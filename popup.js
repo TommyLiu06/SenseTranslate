@@ -1,4 +1,4 @@
-const SETTINGS_KEY = "senseTranslateSettings";
+const AUTO_SAVE_DELAY_MS = 350;
 
 const PROVIDER_PRESETS = {
   deepseek: {
@@ -45,58 +45,169 @@ const multiTurnInput = document.getElementById("multiTurn");
 const themeSelect = document.getElementById("theme");
 const statusText = document.getElementById("status");
 
-providerSelect.addEventListener("change", () => {
-  const preset = PROVIDER_PRESETS[providerSelect.value];
-  if (!preset) {
-    return;
-  }
-  baseUrlInput.value = preset.baseUrl;
-  modelInput.value = preset.model;
+let saveTimerId = null;
+let pendingSaveOptions = { updateApiKey: false };
+let saveChain = Promise.resolve();
+let themeCleanup = null;
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
 });
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setStatus("Saving...");
-  const payload = normalizeSettings(readForm());
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "SAVE_SETTINGS",
-      settings: payload
-    });
-    if (!response?.ok) {
-      throw new Error(response?.error || "Save failed.");
-    }
-    fillForm(response.settings);
-    setStatus("Saved.");
-  } catch (error) {
-    setStatus(`Save failed: ${error.message || String(error)}`);
+providerSelect.addEventListener("change", () => {
+  void handleProviderChange();
+});
+
+apiKeyInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: true });
+});
+
+baseUrlInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+modelInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+beforeWordsInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+afterWordsInput.addEventListener("input", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+multiTurnInput.addEventListener("change", () => {
+  scheduleSave({ updateApiKey: false });
+});
+
+themeSelect.addEventListener("change", () => {
+  applyPopupTheme(themeSelect.value);
+  void flushScheduledSave().then(() => queueSave({ updateApiKey: false }));
+});
+
+window.addEventListener("unload", () => {
+  if (typeof themeCleanup === "function") {
+    themeCleanup();
   }
 });
 
 void load();
 
 async function load() {
+  setStatus("Loading...");
   try {
-    const storage = await chrome.storage.sync.get(SETTINGS_KEY);
-    const settings = normalizeSettings(storage[SETTINGS_KEY] || {});
+    const response = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
+    if (!response?.ok || !response.settings) {
+      throw new Error(response?.error || "Load failed.");
+    }
+    const settings = normalizeSettings(response.settings);
     fillForm(settings);
-    setStatus("");
+    applyPopupTheme(settings.theme);
+    setStatus("Saved");
   } catch (error) {
     fillForm(DEFAULT_SETTINGS);
-    setStatus(`Load failed: ${error.message || String(error)}`);
+    applyPopupTheme(DEFAULT_SETTINGS.theme);
+    setStatus(`Load failed: ${error.message || String(error)}`, true);
   }
+}
+
+async function handleProviderChange() {
+  await flushScheduledSave();
+
+  const provider = providerSelect.value;
+  const preset = PROVIDER_PRESETS[provider];
+  if (preset) {
+    baseUrlInput.value = preset.baseUrl;
+    modelInput.value = preset.model;
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "GET_PROVIDER_API_KEY",
+      provider
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || "Failed to load provider key.");
+    }
+    apiKeyInput.value = response.apiKey || "";
+  } catch (error) {
+    apiKeyInput.value = "";
+    setStatus(`Provider key load failed: ${error.message || String(error)}`, true);
+  }
+
+  await queueSave({ updateApiKey: false });
+}
+
+function scheduleSave(options) {
+  pendingSaveOptions.updateApiKey = pendingSaveOptions.updateApiKey || Boolean(options?.updateApiKey);
+  if (saveTimerId) {
+    clearTimeout(saveTimerId);
+  }
+  saveTimerId = window.setTimeout(() => {
+    const currentOptions = pendingSaveOptions;
+    pendingSaveOptions = { updateApiKey: false };
+    saveTimerId = null;
+    void queueSave(currentOptions);
+  }, AUTO_SAVE_DELAY_MS);
+}
+
+async function flushScheduledSave() {
+  if (!saveTimerId) {
+    return;
+  }
+  clearTimeout(saveTimerId);
+  saveTimerId = null;
+  const currentOptions = pendingSaveOptions;
+  pendingSaveOptions = { updateApiKey: false };
+  await queueSave(currentOptions);
+}
+
+function queueSave(options) {
+  saveChain = saveChain
+    .then(() => persistSettings(options))
+    .catch((error) => {
+      setStatus(`Save failed: ${error.message || String(error)}`, true);
+    });
+  return saveChain;
+}
+
+async function persistSettings(options) {
+  setStatus("Saving...");
+  const payload = normalizeSettings(readForm());
+  const request = {
+    type: "SAVE_SETTINGS",
+    settings: payload,
+    updateApiKey: Boolean(options?.updateApiKey),
+    providerForApiKey: payload.provider
+  };
+
+  if (options?.updateApiKey) {
+    request.apiKey = apiKeyInput.value;
+  }
+
+  const response = await chrome.runtime.sendMessage(request);
+  if (!response?.ok || !response.settings) {
+    throw new Error(response?.error || "Save failed.");
+  }
+
+  const saved = normalizeSettings(response.settings);
+  fillForm(saved);
+  applyPopupTheme(saved.theme);
+  setStatus("Saved");
 }
 
 function readForm() {
   return {
     provider: providerSelect.value,
-    apiKey: apiKeyInput.value,
     baseUrl: baseUrlInput.value,
     model: modelInput.value,
     contextBeforeWords: beforeWordsInput.value,
     contextAfterWords: afterWordsInput.value,
     multiTurn: multiTurnInput.checked,
-    theme: themeSelect.value
+    theme: themeSelect.value,
+    apiKey: apiKeyInput.value
   };
 }
 
@@ -111,8 +222,30 @@ function fillForm(settings) {
   themeSelect.value = settings.theme;
 }
 
-function setStatus(text) {
+function setStatus(text, isError = false) {
   statusText.textContent = text;
+  statusText.style.color = isError ? "#d84b4b" : "";
+}
+
+function applyPopupTheme(mode) {
+  if (typeof themeCleanup === "function") {
+    themeCleanup();
+    themeCleanup = null;
+  }
+
+  if (mode !== "system") {
+    document.body.dataset.theme = mode;
+    return;
+  }
+
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  const apply = () => {
+    document.body.dataset.theme = media.matches ? "dark" : "light";
+  };
+  const listener = () => apply();
+  media.addEventListener("change", listener);
+  themeCleanup = () => media.removeEventListener("change", listener);
+  apply();
 }
 
 function normalizeSettings(raw) {

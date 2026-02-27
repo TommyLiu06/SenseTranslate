@@ -9,11 +9,9 @@ body {
   color: #1a2331;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: linear-gradient(160deg, #131a24, #1e2733);
-    color: #eaf0ff;
-  }
+body[data-theme="dark"] {
+  background: linear-gradient(160deg, #131a24, #1e2733);
+  color: #eaf0ff;
 }
 
 .panel {
@@ -57,8 +55,7 @@ h1 {
 }
 
 input,
-select,
-button {
+select {
   border: 1px solid rgba(29, 43, 66, 0.2);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.82);
@@ -67,16 +64,10 @@ button {
   font-size: 13px;
 }
 
-button {
-  cursor: pointer;
-  background: linear-gradient(140deg, #2b6ef2, #4b94ff);
-  color: #ffffff;
-  border: none;
-  font-weight: 600;
-}
-
-button:hover {
-  box-shadow: 0 0 0 1px rgba(43, 110, 242, 0.3), 0 0 15px rgba(43, 110, 242, 0.25);
+.autosave-hint {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.72;
 }
 
 #status {
@@ -86,10 +77,8 @@ button:hover {
   opacity: 0.85;
 }
 
-@media (prefers-color-scheme: dark) {
-  input,
-  select {
-    border-color: rgba(230, 239, 255, 0.18);
-    background: rgba(30, 38, 49, 0.9);
-  }
+body[data-theme="dark"] input,
+body[data-theme="dark"] select {
+  border-color: rgba(230, 239, 255, 0.18);
+  background: rgba(30, 38, 49, 0.9);
 }

@@ -1,5 +1,7 @@
 const MENU_ID = "sense-translate-menu";
 const SETTINGS_KEY = "senseTranslateSettings";
+const ENCRYPTED_API_KEYS_KEY = "senseTranslateEncryptedApiKeys";
+const CRYPTO_SECRET_KEY = "senseTranslateCryptoSecret";
 
 const PROVIDER_PRESETS = {
   deepseek: {
@@ -26,7 +28,6 @@ const PROVIDER_PRESETS = {
 
 const DEFAULT_SETTINGS = {
   provider: "deepseek",
-  apiKey: "",
   baseUrl: PROVIDER_PRESETS.deepseek.baseUrl,
   model: PROVIDER_PRESETS.deepseek.model,
   contextBeforeWords: 80,
@@ -81,8 +82,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "GET_PROVIDER_API_KEY") {
+    getProviderApiKeyForRequested(message.provider)
+      .then((payload) => sendResponse({ ok: true, ...payload }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (message.type === "SAVE_SETTINGS") {
-    saveSettings(message.settings || {})
+    saveSettings(message.settings || {}, {
+      updateApiKey: Boolean(message.updateApiKey),
+      providerForApiKey: message.providerForApiKey,
+      apiKey: typeof message.apiKey === "string" ? message.apiKey : ""
+    })
       .then((settings) => sendResponse({ ok: true, settings }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
@@ -127,33 +139,64 @@ async function createContextMenu() {
 }
 
 async function getSettings() {
-  const storage = await chrome.storage.sync.get(SETTINGS_KEY);
-  return normalizeSettings(storage[SETTINGS_KEY] || {});
+  const stored = await getStoredSettings();
+  const apiKey = await getProviderApiKey(stored.provider);
+  return { ...stored, apiKey };
 }
 
-async function saveSettings(nextSettings) {
-  const current = await getSettings();
+async function saveSettings(nextSettings, options = {}) {
+  const current = await getStoredSettings();
   const merged = normalizeSettings({ ...current, ...nextSettings });
   await chrome.storage.sync.set({ [SETTINGS_KEY]: merged });
-  return merged;
+
+  if (options.updateApiKey) {
+    const providerForApiKey = resolveProvider(options.providerForApiKey, merged.provider);
+    const plainApiKey = typeof options.apiKey === "string" ? options.apiKey.trim() : "";
+    await setProviderApiKey(providerForApiKey, plainApiKey);
+  }
+
+  const apiKey = await getProviderApiKey(merged.provider);
+  return { ...merged, apiKey };
+}
+
+async function getStoredSettings() {
+  const storage = await chrome.storage.sync.get(SETTINGS_KEY);
+  const raw = storage[SETTINGS_KEY] || {};
+  const normalized = normalizeSettings(raw);
+  await migrateLegacyApiKeyIfNeeded(raw, normalized);
+  return normalized;
+}
+
+async function migrateLegacyApiKeyIfNeeded(raw, normalized) {
+  const legacyApiKey = typeof raw.apiKey === "string" ? raw.apiKey.trim() : "";
+  if (!legacyApiKey) {
+    return;
+  }
+
+  const existing = await getProviderApiKey(normalized.provider);
+  if (!existing) {
+    await setProviderApiKey(normalized.provider, legacyApiKey);
+  }
+
+  await chrome.storage.sync.set({ [SETTINGS_KEY]: normalized });
+}
+
+async function getProviderApiKeyForRequested(providerValue) {
+  const provider = resolveProvider(providerValue, DEFAULT_SETTINGS.provider);
+  const apiKey = await getProviderApiKey(provider);
+  return { provider, apiKey };
 }
 
 function normalizeSettings(raw) {
-  const provider = typeof raw.provider === "string" && PROVIDER_PRESETS[raw.provider]
-    ? raw.provider
-    : DEFAULT_SETTINGS.provider;
-
+  const provider = resolveProvider(raw.provider, DEFAULT_SETTINGS.provider);
   const providerPreset = PROVIDER_PRESETS[provider];
   const contextBeforeWords = clampInteger(raw.contextBeforeWords, 0, 1000, DEFAULT_SETTINGS.contextBeforeWords);
   const contextAfterWords = clampInteger(raw.contextAfterWords, 0, 1000, DEFAULT_SETTINGS.contextAfterWords);
   const multiTurn = typeof raw.multiTurn === "boolean" ? raw.multiTurn : DEFAULT_SETTINGS.multiTurn;
-  const theme = raw.theme === "light" || raw.theme === "dark" || raw.theme === "system"
-    ? raw.theme
-    : DEFAULT_SETTINGS.theme;
+  const theme = normalizeTheme(raw.theme);
 
   return {
     provider,
-    apiKey: typeof raw.apiKey === "string" ? raw.apiKey.trim() : "",
     baseUrl: normalizeBaseUrl(raw.baseUrl, providerPreset.baseUrl),
     model: normalizeModel(raw.model, providerPreset.model),
     contextBeforeWords,
@@ -161,6 +204,20 @@ function normalizeSettings(raw) {
     multiTurn,
     theme
   };
+}
+
+function resolveProvider(value, fallback) {
+  if (typeof value === "string" && PROVIDER_PRESETS[value]) {
+    return value;
+  }
+  return fallback;
+}
+
+function normalizeTheme(value) {
+  if (value === "light" || value === "dark" || value === "system") {
+    return value;
+  }
+  return DEFAULT_SETTINGS.theme;
 }
 
 function normalizeBaseUrl(value, fallback) {
@@ -188,6 +245,108 @@ function clampInteger(value, min, max, fallback) {
     return fallback;
   }
   return Math.min(max, Math.max(min, parsed));
+}
+
+async function getProviderApiKey(providerValue) {
+  const provider = resolveProvider(providerValue, DEFAULT_SETTINGS.provider);
+  const storage = await chrome.storage.local.get(ENCRYPTED_API_KEYS_KEY);
+  const encryptedApiKeys = isObject(storage[ENCRYPTED_API_KEYS_KEY]) ? storage[ENCRYPTED_API_KEYS_KEY] : {};
+  const encryptedPayload = encryptedApiKeys[provider];
+  if (!encryptedPayload) {
+    return "";
+  }
+
+  try {
+    return await decryptSecretPayload(encryptedPayload);
+  } catch (_) {
+    return "";
+  }
+}
+
+async function setProviderApiKey(providerValue, plainApiKey) {
+  const provider = resolveProvider(providerValue, DEFAULT_SETTINGS.provider);
+  const storage = await chrome.storage.local.get(ENCRYPTED_API_KEYS_KEY);
+  const encryptedApiKeys = isObject(storage[ENCRYPTED_API_KEYS_KEY]) ? storage[ENCRYPTED_API_KEYS_KEY] : {};
+
+  if (!plainApiKey) {
+    delete encryptedApiKeys[provider];
+  } else {
+    encryptedApiKeys[provider] = await encryptSecretPayload(plainApiKey);
+  }
+
+  await chrome.storage.local.set({ [ENCRYPTED_API_KEYS_KEY]: encryptedApiKeys });
+}
+
+async function encryptSecretPayload(text) {
+  const key = await getCryptoKey();
+  const iv = new Uint8Array(12);
+  crypto.getRandomValues(iv);
+
+  const plainBytes = new TextEncoder().encode(text);
+  const encryptedBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plainBytes);
+  return {
+    algorithm: "AES-GCM",
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(encryptedBuffer))
+  };
+}
+
+async function decryptSecretPayload(payload) {
+  if (!isObject(payload) || payload.algorithm !== "AES-GCM") {
+    return "";
+  }
+
+  const iv = base64ToBytes(payload.iv);
+  const encryptedBytes = base64ToBytes(payload.data);
+  if (iv.length === 0 || encryptedBytes.length === 0) {
+    return "";
+  }
+
+  const key = await getCryptoKey();
+  const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encryptedBytes);
+  return new TextDecoder("utf-8").decode(decryptedBuffer);
+}
+
+async function getCryptoKey() {
+  const storage = await chrome.storage.local.get(CRYPTO_SECRET_KEY);
+  let secretBase64 = storage[CRYPTO_SECRET_KEY];
+
+  if (typeof secretBase64 !== "string" || !secretBase64) {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    secretBase64 = bytesToBase64(bytes);
+    await chrome.storage.local.set({ [CRYPTO_SECRET_KEY]: secretBase64 });
+  }
+
+  const rawKeyBytes = base64ToBytes(secretBase64);
+  return crypto.subtle.importKey("raw", rawKeyBytes, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64) {
+  try {
+    const binary = atob(String(base64 || ""));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch (_) {
+    return new Uint8Array();
+  }
+}
+
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function clearConversationForTab(tabId) {

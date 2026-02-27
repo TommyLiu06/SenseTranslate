@@ -41,6 +41,16 @@
   align-items: center;
   gap: 6px;
   padding: 10px 10px 0 10px;
+  cursor: grab;
+  user-select: none;
+}
+
+.sense-translate-header.is-dragging {
+  cursor: grabbing;
+}
+
+.sense-translate-popup.is-dragging {
+  user-select: none;
 }
 
 .sense-translate-btn {
@@ -48,11 +58,20 @@
   background: var(--st-btn-bg);
   color: var(--st-text);
   border-radius: 9px;
-  padding: 4px 8px;
-  font-size: 12px;
-  line-height: 1.2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.sense-translate-btn > span {
+  pointer-events: none;
 }
 
 .sense-translate-btn:hover {
@@ -74,6 +93,13 @@
 }
 
 .sense-translate-main.is-loading::after {
+  content: "▋";
+  margin-left: 2px;
+  color: var(--st-accent);
+  animation: st-caret 0.85s steps(1) infinite;
+}
+
+.sense-translate-explain.is-loading::after {
   content: "▋";
   margin-left: 2px;
   color: var(--st-accent);
