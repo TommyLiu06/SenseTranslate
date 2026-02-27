@@ -12,7 +12,9 @@
   z-index: 2147483646;
   width: min(440px, calc(100vw - 24px));
   max-height: 62vh;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 254, 0.96));
   color: var(--st-text);
   border: 1px solid var(--st-border);
@@ -38,9 +40,12 @@
 
 .sense-translate-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
-  padding: 10px 10px 0 10px;
+  padding: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--st-border) 85%, transparent);
+  background: color-mix(in srgb, var(--st-bg) 70%, transparent);
   cursor: move;
   user-select: none;
 }
@@ -81,7 +86,40 @@
 }
 
 .sense-translate-content {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 8px 12px 12px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--st-accent) 55%, transparent) transparent;
+}
+
+.sense-translate-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sense-translate-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sense-translate-content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-accent) 72%, transparent),
+    color-mix(in srgb, var(--st-accent) 44%, transparent)
+  );
+}
+
+.sense-translate-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-accent) 86%, transparent),
+    color-mix(in srgb, var(--st-accent) 58%, transparent)
+  );
 }
 
 .sense-translate-main {
