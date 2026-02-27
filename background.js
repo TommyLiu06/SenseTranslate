@@ -449,7 +449,8 @@ function buildPrompts(message, settings) {
         "Current task: EXPLAIN_SELECTED_TEXT.",
         "Explain the selected text itself based on surrounding context.",
         `Respond in ${targetLanguage}.`,
-        "Focus on meaning, references, tone, and possible ambiguity."
+        "Focus on meaning, references, tone, and possible ambiguity.",
+        "Do not use Markdown formatting."
       ].join(" "),
       userPrompt: [
         "TASK=EXPLAIN_SELECTED_TEXT",
@@ -461,7 +462,8 @@ function buildPrompts(message, settings) {
         "",
         "Output requirements:",
         "1) Start with one concise summary sentence.",
-        "2) Then provide 2-4 bullet points with key details."
+        "2) Then provide 2-4 short plain-text detail sentences.",
+        "3) Do not use markdown syntax, headings, bullet lists, code blocks, or tables."
       ].join("\n")
     };
   }
