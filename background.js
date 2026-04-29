@@ -6,7 +6,7 @@ const CRYPTO_SECRET_KEY = "senseTranslateCryptoSecret";
 const PROVIDER_PRESETS = {
   deepseek: {
     baseUrl: "https://api.deepseek.com/v1",
-    model: "deepseek-chat"
+    model: "deepseek-v4-flash"
   },
   openai: {
     baseUrl: "https://api.openai.com/v1",
@@ -487,18 +487,24 @@ function buildPrompts(message, settings) {
 
 async function streamChatCompletion({ settings, messages, onDelta }) {
   const endpoint = `${settings.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const body = {
+    model: settings.model,
+    messages,
+    stream: true,
+    temperature: 0.2
+  };
+
+  if (settings.provider === "deepseek" && ["deepseek-v4-flash", "deepseek-v4-pro"].includes(settings.model)) {
+    body.thinking = { type: "disabled" };
+  }
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${settings.apiKey}`
     },
-    body: JSON.stringify({
-      model: settings.model,
-      messages,
-      stream: true,
-      temperature: 0.2
-    })
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {

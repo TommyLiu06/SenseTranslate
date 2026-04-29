@@ -593,7 +593,7 @@ async function requestSettings() {
 
   return {
     provider: "deepseek",
-    model: "deepseek-chat",
+    model: "deepseek-v4-flash",
     contextBeforeWords: 80,
     contextAfterWords: 80,
     multiTurn: true,

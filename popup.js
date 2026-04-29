@@ -4,7 +4,7 @@ const CUSTOM_MODEL_OPTION = "__custom_model__";
 const PROVIDER_PRESETS = {
   deepseek: {
     baseUrl: "https://api.deepseek.com/v1",
-    model: "deepseek-chat"
+    model: "deepseek-v4-flash"
   },
   openai: {
     baseUrl: "https://api.openai.com/v1",
@@ -34,8 +34,8 @@ const PROVIDER_API_KEY_PLACEHOLDER = {
 
 const PROVIDER_MODELS = {
   deepseek: [
-    { id: "deepseek-chat", label: "DeepSeek Chat", recommended: true, fastest: true },
-    { id: "deepseek-reasoner", label: "DeepSeek Reasoner", recommended: false, fastest: false }
+    { id: "deepseek-v4-flash", label: "deepseek-v4-flash", recommended: true, fastest: true },
+    { id: "deepseek-v4-pro", label: "deepseek-v4-pro", recommended: true, fastest: false }
   ],
   glm: [
     { id: "glm-4.5-air", label: "GLM 4.5 Air", recommended: true, fastest: true },
