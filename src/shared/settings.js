@@ -149,4 +149,3 @@ export function clampInteger(value, min, max, fallback) {
   }
   return Math.min(max, Math.max(min, parsed));
 }
-

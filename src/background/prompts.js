@@ -48,4 +48,3 @@ export function buildPrompts(message, settings) {
     ].join("\n\n")
   };
 }
-
