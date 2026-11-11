@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sense Translate",
   "description": "Translate selected text with surrounding context using your preferred LLM provider.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "permissions": [
     "activeTab",
     "contextMenus",
@@ -29,7 +29,9 @@
       "css": [
         "content.css"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
-  ]
+  ],
+  "minimum_chrome_version": "120"
 }

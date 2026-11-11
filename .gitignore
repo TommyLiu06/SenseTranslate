@@ -1,2 +1,14 @@
 prompts/
-.codex
+.codex/
+.agents/
+.aws/
+node_modules/
+dist/
+artifacts/
+.keys/
+.runtime/
+test-results/
+playwright-report/
+*.pem
+.env
+.env.*
